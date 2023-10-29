@@ -1,0 +1,60 @@
+name: afinc-inventory-client-uat
+networks:
+  afinc-inventory-uat-network:
+    driver: bridge 
+
+services:
+  afinc.inventory.client.site-uat:
+    container_name: afinc.inventory.site-uat
+    depends_on:
+      - "afinc.inventory.client.api-uat"
+    build:
+      context: .
+      dockerfile: src/afincinventory.site/Dockerfile
+      args:
+      - AFINC_INVENTORY_BACKEND_URL=https://uat-afinc-inventory-api.loca.lt
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "4890:3000"
+    networks:
+      - afinc-inventory-uat-network  
+  afinc.inventory.client.api-uat:
+    container_name: afinc.inventory.api-uat    
+    restart: on-failure
+    depends_on:
+      afinc.inventory.client.db-uat:
+       condition: service_started
+       restart: true
+    build:
+      context: .
+      dockerfile: src/Afinc.Inventory.Api/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DB_CONNECTION_STRING=host=afinc.inventory.client.db-uat;port=5432;database=AfincInventoryClient;username=postgres;password=afincsol@1
+    ports:
+      - "4891:80"
+    networks:
+      - afinc-inventory-uat-network
+      
+  afinc.inventory.client.db-uat:
+    container_name: afinc.inventory.client.db-uat
+    image: postgres:latest
+    ports:
+      - "3492:5432"
+    restart: on-failure
+    volumes:
+      - afinc.inventoy.client.data-uat:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: afincsol@1
+      POSTGRES_DB: AfincInventoryClient
+    networks:
+      - afinc-inventory-uat-network
+volumes:
+  afinc.inventoy.client.data-uat:
+   driver: local
+   driver_opts:
+      o: bind
+      type: none
+      device: ../data/afinc-inventoy-client-uat

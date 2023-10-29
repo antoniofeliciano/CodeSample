@@ -1,0 +1,58 @@
+name: market-central-dev
+networks:
+  market-central-dev-network:
+    driver: bridge 
+
+services:
+  market.central.site-dev:
+    container_name: market.central.site-dev
+    depends_on:
+      - "market.central.api-dev"
+    build:
+      context: .
+      dockerfile: src/Site/Dockerfile      
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "3890:3000"
+    networks:
+      - market-central-dev-network  
+  market.central.api-dev:
+    container_name: market.central.api-dev    
+    restart: on-failure
+    depends_on:
+      market.central.db-dev:
+       condition: service_started
+       restart: true
+    build:
+      context: .
+      dockerfile: src/Api/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DB_CONNECTION_STRING=host=market.central.db-dev;port=5432;database=MeninaLua;username=postgres;password=afincsol@1
+    ports:
+      - "3891:80"
+    networks:
+      - market-central-dev-network
+      
+  market.central.db-dev:
+    container_name: market.central.db-dev
+    image: postgres:latest
+    ports:
+      - "3892:5432"
+    restart: on-failure
+    volumes:
+      - market.central.db-dev:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: afincsol@1
+      POSTGRES_DB: MarketCentral
+    networks:
+      - market-central-dev-network
+volumes:
+  market.central.db-dev:
+   driver: local
+   driver_opts:
+      o: bind
+      type: none
+      device: ../data/market-central-dev
